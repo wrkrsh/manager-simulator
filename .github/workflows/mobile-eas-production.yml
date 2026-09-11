@@ -76,7 +76,7 @@ concurrency:
 jobs:
   production:
     name: EAS Production ${{ github.event_name == 'push' && 'auto' || inputs.mode }}
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.WRKRSH_DEFAULT_RUNNER }}
     permissions:
       contents: read
     env:

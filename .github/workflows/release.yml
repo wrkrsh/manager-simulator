@@ -45,7 +45,7 @@ jobs:
   # have already run. Scheduled runs also decide here whether a nightly is due.
   resolve_commit:
     name: Resolve release commit
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.WRKRSH_DEFAULT_RUNNER }}
     timeout-minutes: 5
     outputs:
       ref: ${{ steps.resolve.outputs.ref }}
@@ -87,7 +87,7 @@ jobs:
     if: |
       needs.resolve_commit.result == 'success' &&
       (github.event_name != 'schedule' || needs.resolve_commit.outputs.has_changes == 'true')
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.WRKRSH_DEFAULT_RUNNER }}
     timeout-minutes: 10
     outputs:
       release_channel: ${{ steps.release_meta.outputs.release_channel }}
@@ -195,7 +195,7 @@ jobs:
     name: Release quality checks
     needs: [preflight]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' }}
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.WRKRSH_DEFAULT_RUNNER }}
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -223,9 +223,11 @@ jobs:
       - name: Typecheck
         run: vp run typecheck
 
-      - uses: ./.github/actions/setup-apt-mirrors
+      - if: runner.os == 'Linux'
+        uses: ./.github/actions/setup-apt-mirrors
 
       - name: Install browser secret helper build libraries
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config
 
       - name: Test
@@ -239,7 +241,7 @@ jobs:
     if: |
       needs.resolve_commit.result == 'success' &&
       (github.event_name != 'schedule' || needs.resolve_commit.outputs.has_changes == 'true')
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.WRKRSH_DEFAULT_RUNNER }}
     timeout-minutes: 5
     environment:
       name: production
@@ -404,14 +406,14 @@ jobs:
       matrix:
         include:
           - label: macOS arm64
-            runner: blacksmith-12vcpu-macos-26
+            runner: "${{ vars.WRKRSH_DEFAULT_RUNNER }}"
             platform: mac
             target: dmg
             arch: arm64
             rust_target: aarch64-apple-darwin
             resource_key: darwin-arm64
           - label: macOS x64
-            runner: blacksmith-12vcpu-macos-26
+            runner: "${{ vars.WRKRSH_DEFAULT_RUNNER }}"
             platform: mac
             target: dmg
             arch: x64
@@ -545,10 +547,10 @@ jobs:
           }
 
       - uses: ./.github/actions/setup-apt-mirrors
-        if: matrix.platform == 'linux'
+        if: runner.os == 'Linux' && (matrix.platform == 'linux')
 
       - name: Install Linux desktop build libraries
-        if: matrix.platform == 'linux'
+        if: runner.os == 'Linux' && (matrix.platform == 'linux')
         shell: bash
         run: |
           sudo apt-get update
@@ -857,7 +859,7 @@ jobs:
     name: Publish GitHub Release
     needs: [preflight, build, publish_cli]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.build.result == 'success' && needs.publish_cli.result == 'success' }}
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.WRKRSH_DEFAULT_RUNNER }}
     timeout-minutes: 30
     permissions:
       contents: write
@@ -953,7 +955,7 @@ jobs:
     name: Deploy hosted web app
     needs: [preflight, relay_public_config, release]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.release.result == 'success' }}
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.WRKRSH_DEFAULT_RUNNER }}
     timeout-minutes: 10
     env:
       T3CODE_CLERK_PUBLISHABLE_KEY: ${{ needs.relay_public_config.outputs.clerk_publishable_key }}
@@ -1072,7 +1074,7 @@ jobs:
     name: Deploy marketing site
     needs: [preflight, release]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.release.result == 'success' && needs.preflight.outputs.release_channel == 'nightly' }}
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.WRKRSH_DEFAULT_RUNNER }}
     timeout-minutes: 10
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -1126,7 +1128,7 @@ jobs:
     name: Finalize release
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.release.result == 'success' && needs.preflight.outputs.release_channel == 'stable' }}
     needs: [preflight, release]
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.WRKRSH_DEFAULT_RUNNER }}
     timeout-minutes: 10
     steps:
       - id: app_token
@@ -1211,7 +1213,7 @@ jobs:
       needs.deploy_web.result == 'success' &&
       (needs.finalize.result == 'success' || needs.finalize.result == 'skipped')
     needs: [preflight, relay_public_config, release, deploy_web, finalize]
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.WRKRSH_DEFAULT_RUNNER }}
     timeout-minutes: 10
     steps:
       - name: Checkout
