@@ -16,7 +16,7 @@ permissions:
 jobs:
   forward:
     name: POST to Cursor
-    runs-on: ubuntu-24.04
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || vars.WRKRSH_DEFAULT_RUNNER }}
     steps:
       - name: POST to Cursor
         env:
